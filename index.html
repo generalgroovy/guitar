@@ -1,1 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guitar Practice Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,300;9..144,500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg: #0e0e0f;
+    --surface: #17171a;
+    --surface2: #1f1f24;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.16);
+    --text: #f0ede8;
+    --muted: #7a7872;
+    --accent: #c8b560;
+    --accent2: #7db89a;
+    --accent3: #c07090;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── BACKGROUND TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 10%, rgba(200,181,96,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 10% 80%, rgba(125,184,154,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── LAYOUT ── */
+  .page { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+  /* ── HEADER ── */
+  header { margin-bottom: 3rem; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 300;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+  .header-desc { color: var(--muted); font-size: 14px; max-width: 420px; }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3px;
+    margin-bottom: 1.75rem;
+  }
+  .tab {
+    flex: 1;
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--surface2); color: var(--text); border: 0.5px solid var(--border-hover); }
+
+  /* ── OUTPUT CARD ── */
+  .output-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .output-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .output-body { flex: 1; }
+  .output-meta { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .empty-hint { color: var(--muted); font-size: 14px; }
+
+  /* CHORD CHIPS */
+  .chord-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .chord-chip {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 500;
+    padding: 5px 14px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border-hover);
+    border-radius: 8px;
+    color: var(--text);
+  }
+  .chord-arrow { color: var(--muted); font-size: 12px; }
+
+  /* NOTE SEQUENCE */
+  .note-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .note-cell {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+  }
+  .note-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); }
+
+  /* PICKING GRID */
+  .pick-row { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pick-cell {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 0.5px solid transparent;
+  }
+  .pick-down  { background: rgba(200,181,96,0.15); color: var(--accent);  border-color: rgba(200,181,96,0.25); }
+  .pick-up    { background: rgba(125,184,154,0.13); color: var(--accent2); border-color: rgba(125,184,154,0.2); }
+  .pick-rest  { background: var(--surface2); color: var(--muted); border-color: var(--border); }
+  .pick-thumb { background: rgba(192,112,144,0.13); color: var(--accent3); border-color: rgba(192,112,144,0.2); }
+
+  /* ── PARAMS CARD ── */
+  .params-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+  }
+  .params-header {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 0.5px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .free-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(200,181,96,0.12);
+    color: var(--accent);
+    border: 0.5px solid rgba(200,181,96,0.25);
+    transition: all 0.2s;
+  }
+  .free-badge.none { background: var(--surface2); color: var(--muted); border-color: var(--border); }
+
+  .param-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 1.25rem;
+    border-bottom: 0.5px solid var(--border);
+    transition: background 0.1s;
+  }
+  .param-row:last-child { border-bottom: none; }
+  .param-row:hover { background: rgba(255,255,255,0.015); }
+
+  /* Custom checkbox */
+  .lock-wrap { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
+  .lock-wrap input[type=checkbox] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--muted);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lock-wrap input[type=checkbox]:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .lock-wrap input[type=checkbox]:checked::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 5px;
+    width: 4px; height: 7px;
+    border: 2px solid var(--bg);
+    border-top: none;
+    border-left: none;
+    transform: rotate(40deg);
+  }
+
+  .param-label {
+    font-size: 13px;
+    color: var(--muted);
+    width: 120px;
+    flex-shrink: 0;
+  }
+  .param-control { display: flex; align-items: center; gap: 10px; flex: 1; }
+
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--surface2);
+    border: 0.5px solid var(--border-hover);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 5px 28px 5px 10px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a7872' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    transition: border-color 0.15s;
+  }
+  select:hover { border-color: rgba(255,255,255,0.25); }
+  select option { background: #1f1f24; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100px;
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    cursor: pointer;
+  }
+  .range-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    min-width: 28px;
+  }
+
+  /* ── ACTION BAR ── */
+  .action-bar { display: flex; gap: 8px; }
+  .btn {
+    flex: 1;
+    padding: 11px 20px;
+    border-radius: var(--radius);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 0.5px solid var(--border-hover);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+  .btn-primary {
+    background: var(--accent);
+    border: none;
+    color: #0e0e0f;
+  }
+  .btn-primary:hover { background: #d4c070; }
+  .btn-primary:active { transform: scale(0.98); }
+
+  /* ── HIDDEN ── */
+  .hidden { display: none !important; }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 0.5px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .output-body > * { animation: fadeIn 0.25s ease; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 500px) {
+    .param-label { width: 90px; }
+    input[type=range] { width: 70px; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Hub Pages · Practice Tools</p>
+    <h1>Guitar <em>Practice</em><br>Generator</h1>
+    <p class="header-desc">Generate chord progressions, melodies, and picking patterns. Lock parameters to keep them static across randomizations.</p>
+  </header>
+
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('chords', this)">Chords</button>
+    <button class="tab" onclick="switchTab('melody', this)">Melody</button>
+    <button class="tab" onclick="switchTab('picking', this)">Picking</button>
+  </div>
+
+  <!-- ═══ CHORDS TAB ═══ -->
+  <div id="tab-chords">
+    <div class="output-card">
+      <div class="output-label">Chord progression</div>
+      <div class="output-body" id="chord-out"><span class="empty-hint">Press generate to create a progression</span></div>
+    </div>
+
+    <div class="params-card">
+      <div class="params-header">
+        Parameters
+        <span class="free-badge none" id="chord-badge">0 free</span>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-ckey" checked onchange="updateBadge('chord')"></div>
+        <span class="param-label">Key</span>
+        <div class="param-control">
+          <select id="sel-ckey">
+            <option>C</option><option>C#</option><option>D</option><option>Eb</option>
+            <option>E</option><option>F</option><option>F#</option><option>G</option>
+            <option>Ab</option><option>A</option><option>Bb</option><option>B</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-cmode" checked onchange="updateBadge('chord')"></div>
+        <span class="param-label">Mode</span>
+        <div class="param-control">
+          <select id="sel-cmode">
+            <option>Major</option><option>Minor</option><option>Dorian</option>
+            <option>Mixolydian</option><option>Pentatonic</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-cbars" onchange="updateBadge('chord')"></div>
+        <span class="param-label">Bars</span>
+        <div class="param-control">
+          <input type="range" id="rng-cbars" min="2" max="8" value="4" step="2" oninput="document.getElementById('cbars-val').textContent=this.value">
+          <span class="range-val" id="cbars-val">4</span>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-cext" onchange="updateBadge('chord')"></div>
+        <span class="param-label">Extensions</span>
+        <div class="param-control">
+          <select id="sel-cext">
+            <option>None</option><option>7th</option><option>9th</option>
+            <option>Sus2</option><option>Sus4</option><option>add9</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-cbpm" checked onchange="updateBadge('chord')"></div>
+        <span class="param-label">BPM</span>
+        <div class="param-control">
+          <input type="range" id="rng-cbpm" min="60" max="180" value="90" step="1" oninput="document.getElementById('cbpm-val').textContent=this.value">
+          <span class="range-val" id="cbpm-val">90</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-ghost" onclick="resetChords()">Reset</button>
+      <button class="btn btn-primary" onclick="generateChords()">Generate ↻</button>
+    </div>
+  </div>
+
+  <!-- ═══ MELODY TAB ═══ -->
+  <div id="tab-melody" class="hidden">
+    <div class="output-card">
+      <div class="output-label">Melody phrase</div>
+      <div class="output-body" id="melody-out"><span class="empty-hint">Press generate to create a melody</span></div>
+    </div>
+
+    <div class="params-card">
+      <div class="params-header">
+        Parameters
+        <span class="free-badge none" id="melody-badge">0 free</span>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-mkey" checked onchange="updateBadge('melody')"></div>
+        <span class="param-label">Key</span>
+        <div class="param-control">
+          <select id="sel-mkey">
+            <option>C</option><option>D</option><option>E</option><option>G</option><option>A</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-mscale" onchange="updateBadge('melody')"></div>
+        <span class="param-label">Scale</span>
+        <div class="param-control">
+          <select id="sel-mscale">
+            <option>Pentatonic</option><option>Major</option><option>Minor</option>
+            <option>Blues</option><option>Chromatic</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-mnotes" onchange="updateBadge('melody')"></div>
+        <span class="param-label">Note count</span>
+        <div class="param-control">
+          <input type="range" id="rng-mnotes" min="4" max="12" value="8" step="1" oninput="document.getElementById('mnotes-val').textContent=this.value">
+          <span class="range-val" id="mnotes-val">8</span>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-mdir" onchange="updateBadge('melody')"></div>
+        <span class="param-label">Direction</span>
+        <div class="param-control">
+          <select id="sel-mdir">
+            <option>Random</option><option>Ascending</option><option>Descending</option><option>Arch</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-moct" checked onchange="updateBadge('melody')"></div>
+        <span class="param-label">Octave</span>
+        <div class="param-control">
+          <select id="sel-moct">
+            <option>3</option><option selected>4</option><option>5</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-ghost" onclick="resetMelody()">Reset</button>
+      <button class="btn btn-primary" onclick="generateMelody()">Generate ↻</button>
+    </div>
+  </div>
+
+  <!-- ═══ PICKING TAB ═══ -->
+  <div id="tab-picking" class="hidden">
+    <div class="output-card">
+      <div class="output-label">Picking pattern</div>
+      <div class="output-body" id="pick-out"><span class="empty-hint">Press generate to create a pattern</span></div>
+    </div>
+
+    <div class="params-card">
+      <div class="params-header">
+        Parameters
+        <span class="free-badge none" id="picking-badge">0 free</span>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-pstyle" checked onchange="updateBadge('picking')"></div>
+        <span class="param-label">Style</span>
+        <div class="param-control">
+          <select id="sel-pstyle">
+            <option>Alternate</option><option>Economy</option><option>Sweep</option>
+            <option>Hybrid</option><option>Fingerstyle</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-plen" onchange="updateBadge('picking')"></div>
+        <span class="param-label">Pattern length</span>
+        <div class="param-control">
+          <input type="range" id="rng-plen" min="4" max="16" value="8" step="4" oninput="document.getElementById('plen-val').textContent=this.value">
+          <span class="range-val" id="plen-val">8</span>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-prest" onchange="updateBadge('picking')"></div>
+        <span class="param-label">Rest density</span>
+        <div class="param-control">
+          <select id="sel-prest">
+            <option>None</option><option>Low</option><option>Medium</option><option>High</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="param-row">
+        <div class="lock-wrap"><input type="checkbox" id="lk-psync" onchange="updateBadge('picking')"></div>
+        <span class="param-label">Syncopation</span>
+        <div class="param-control">
+          <select id="sel-psync">
+            <option>Off</option><option>Light</option><option>Heavy</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-ghost" onclick="resetPicking()">Reset</button>
+      <button class="btn btn-primary" onclick="generatePicking()">Generate ↻</button>
+    </div>
+  </div>
+
+  <footer>
+    <span>Guitar Practice Generator · Hub Pages</span>
+    <span>Open source · <a href="https://github.com/">GitHub</a></span>
+  </footer>
+
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const CHROMATIC = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+const KEY_OFF   = {C:0,'C#':1,D:2,Eb:3,E:4,F:5,'F#':6,G:7,Ab:8,A:9,Bb:10,B:11};
+
+const MODES = {
+  Major:      { pool:['I','IV','V','ii','iii','vi'],     quality:{'I':'','IV':'','V':'','ii':'m','iii':'m','vi':'m'} },
+  Minor:      { pool:['i','iv','v','VI','III','VII'],    quality:{'i':'m','iv':'m','v':'m','VI':'','III':'','VII':''} },
+  Dorian:     { pool:['i','ii','III','IV','v','VII'],    quality:{'i':'m','ii':'m','III':'','IV':'','v':'m','VII':''} },
+  Mixolydian: { pool:['I','ii','IV','VII','v'],          quality:{'I':'','ii':'m','IV':'','VII':'','v':'m'} },
+  Pentatonic: { pool:['I','IV','V','vi'],                quality:{'I':'','IV':'','V':'','vi':'m'} }
+};
+
+const SCALE_STEPS = {
+  Pentatonic: [0,2,4,7,9],
+  Major:      [0,2,4,5,7,9,11],
+  Minor:      [0,2,3,5,7,8,10],
+  Blues:      [0,3,5,6,7,10],
+  Chromatic:  [0,1,2,3,4,5,6,7,8,9,10,11]
+};
+
+const DEG_IDX = {'I':0,'II':1,'III':2,'IV':3,'V':4,'VI':5,'VII':6,'i':0,'ii':1,'iii':2,'iv':3,'v':4,'vi':5,'vii':6};
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+const rand     = arr => arr[Math.floor(Math.random() * arr.length)];
+const randN    = (min, max) => Math.round(Math.random() * (max - min) + min);
+const isLocked = id => document.getElementById(id).checked;
+const getVal   = id => document.getElementById(id).value;
+const setVal   = (id, v) => { document.getElementById(id).value = v; };
+
+function buildScale(key, scaleName) {
+  const off = KEY_OFF[key] || 0;
+  return SCALE_STEPS[scaleName].map(s => CHROMATIC[(s + off) % 12]);
+}
+
+// ─── BADGE ──────────────────────────────────────────────────────────────────
+const TAB_LOCKS = {
+  chord:   ['lk-ckey','lk-cmode','lk-cbars','lk-cext','lk-cbpm'],
+  melody:  ['lk-mkey','lk-mscale','lk-mnotes','lk-mdir','lk-moct'],
+  picking: ['lk-pstyle','lk-plen','lk-prest','lk-psync']
+};
+
+function updateBadge(tab) {
+  const ids    = TAB_LOCKS[tab];
+  const free   = ids.filter(id => !document.getElementById(id).checked).length;
+  const badge  = document.getElementById(tab + '-badge');
+  badge.textContent = free === 0 ? 'all locked' : free + ' free';
+  badge.className   = 'free-badge' + (free === 0 ? ' none' : '');
+}
+
+['chord','melody','picking'].forEach(updateBadge);
+
+// ─── TAB SWITCH ─────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  ['chords','melody','picking'].forEach(t => document.getElementById('tab-' + t).classList.add('hidden'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  btn.classList.add('active');
+}
+
+// ─── RANDOMIZE HELPERS ───────────────────────────────────────────────────────
+function maybeRandom(lockId, currentId, randomFn) {
+  if (isLocked(lockId)) return getVal(currentId);
+  const v = randomFn();
+  setVal(currentId, v);
+  return v;
+}
+
+function maybeRandomRange(lockId, rangeId, valId, min, max, step) {
+  if (isLocked(lockId)) return parseInt(getVal(rangeId));
+  const v = Math.round((Math.random() * ((max - min) / step)) ) * step + min;
+  setVal(rangeId, v);
+  document.getElementById(valId).textContent = v;
+  return v;
+}
+
+// ─── CHORDS ─────────────────────────────────────────────────────────────────
+function generateChords() {
+  const ALL_KEYS = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+  const ALL_MODES = ['Major','Minor','Dorian','Mixolydian','Pentatonic'];
+  const ALL_EXTS  = ['None','7th','9th','Sus2','Sus4','add9'];
+
+  const key  = maybeRandom('lk-ckey',  'sel-ckey',  () => rand(ALL_KEYS));
+  const mode = maybeRandom('lk-cmode', 'sel-cmode', () => rand(ALL_MODES));
+  const bars = maybeRandomRange('lk-cbars', 'rng-cbars', 'cbars-val', 2, 8, 2);
+  const ext  = maybeRandom('lk-cext',  'sel-cext',  () => rand(ALL_EXTS));
+  const bpm  = maybeRandomRange('lk-cbpm', 'rng-cbpm', 'cbpm-val', 60, 180, 1);
+
+  const modeData  = MODES[mode] || MODES.Major;
+  const scale     = buildScale(key, mode === 'Pentatonic' ? 'Pentatonic' : 'Major');
+  const numChords = bars;
+  const prog      = Array.from({length: numChords}, () => rand(modeData.pool));
+
+  const extStr = ext === 'None' ? '' : ext === '7th' ? '7' : ext === '9th' ? '9' : ext.toLowerCase();
+
+  const off = KEY_OFF[key] || 0;
+  const chromScale = SCALE_STEPS[mode === 'Pentatonic' ? 'Pentatonic' : 'Major'].map(s => CHROMATIC[(s + off) % 12]);
+
+  const chips = prog.map((deg, i) => {
+    const idx  = DEG_IDX[deg] || 0;
+    const root = chromScale[idx % chromScale.length] || key;
+    const q    = modeData.quality[deg] || '';
+    const sep  = i < prog.length - 1 ? '<span class="chord-arrow">→</span>' : '';
+    return `<span class="chord-chip">${root}${q}${extStr}</span>${sep}`;
+  }).join('');
+
+  document.getElementById('chord-out').innerHTML =
+    `<div class="chord-row">${chips}</div>` +
+    `<div class="output-meta">${bars} bars · ${bpm} bpm · ${mode} · Key of ${key}${ext !== 'None' ? ' · ' + ext : ''}</div>`;
+}
+
+function resetChords() {
+  setVal('sel-ckey', 'C'); setVal('sel-cmode', 'Major');
+  setVal('rng-cbars', 4); document.getElementById('cbars-val').textContent = 4;
+  setVal('sel-cext', 'None');
+  setVal('rng-cbpm', 90); document.getElementById('cbpm-val').textContent = 90;
+  document.getElementById('chord-out').innerHTML = '<span class="empty-hint">Press generate to create a progression</span>';
+}
+
+// ─── MELODY ─────────────────────────────────────────────────────────────────
+function generateMelody() {
+  const ALL_KEYS   = ['C','D','E','G','A'];
+  const ALL_SCALES = ['Pentatonic','Major','Minor','Blues','Chromatic'];
+  const ALL_DIRS   = ['Random','Ascending','Descending','Arch'];
+  const ALL_OCTS   = ['3','4','5'];
+
+  const key   = maybeRandom('lk-mkey',   'sel-mkey',   () => rand(ALL_KEYS));
+  const scale = maybeRandom('lk-mscale', 'sel-mscale', () => rand(ALL_SCALES));
+  const count = maybeRandomRange('lk-mnotes', 'rng-mnotes', 'mnotes-val', 4, 12, 1);
+  const dir   = maybeRandom('lk-mdir',   'sel-mdir',   () => rand(ALL_DIRS));
+  const oct   = maybeRandom('lk-moct',   'sel-moct',   () => rand(ALL_OCTS));
+
+  const scaleNotes = buildScale(key, scale);
+  const len        = scaleNotes.length;
+
+  let indices = [];
+  if (dir === 'Ascending') {
+    for (let i = 0; i < count; i++) indices.push(i % len);
+  } else if (dir === 'Descending') {
+    for (let i = count - 1; i >= 0; i--) indices.push(((i % len) + len) % len);
+  } else if (dir === 'Arch') {
+    const half = Math.ceil(count / 2);
+    for (let i = 0; i < half; i++) indices.push(i % len);
+    for (let i = half - 2; i >= 0 && indices.length < count; i--) indices.push(i % len);
+  } else {
+    for (let i = 0; i < count; i++) indices.push(Math.floor(Math.random() * len));
+  }
+
+  const notes = indices.map(i => scaleNotes[i]);
+  const cells = notes.map((n, i) =>
+    `<div class="note-cell">${n}</div>${i < notes.length - 1 ? '<div class="note-dot"></div>' : ''}`
+  ).join('');
+
+  document.getElementById('melody-out').innerHTML =
+    `<div class="note-row">${cells}</div>` +
+    `<div class="output-meta">${count} notes · Key of ${key} · ${scale} scale · Oct ${oct} · ${dir}</div>`;
+}
+
+function resetMelody() {
+  setVal('sel-mkey', 'C'); setVal('sel-mscale', 'Pentatonic');
+  setVal('rng-mnotes', 8); document.getElementById('mnotes-val').textContent = 8;
+  setVal('sel-mdir', 'Random'); setVal('sel-moct', '4');
+  document.getElementById('melody-out').innerHTML = '<span class="empty-hint">Press generate to create a melody</span>';
+}
+
+// ─── PICKING ─────────────────────────────────────────────────────────────────
+function generatePicking() {
+  const ALL_STYLES = ['Alternate','Economy','Sweep','Hybrid','Fingerstyle'];
+  const ALL_RESTS  = ['None','Low','Medium','High'];
+  const ALL_SYNCS  = ['Off','Light','Heavy'];
+
+  const style = maybeRandom('lk-pstyle', 'sel-pstyle', () => rand(ALL_STYLES));
+  const len   = maybeRandomRange('lk-plen', 'rng-plen', 'plen-val', 4, 16, 4);
+  const restD = maybeRandom('lk-prest', 'sel-prest', () => rand(ALL_RESTS));
+  const sync  = maybeRandom('lk-psync', 'sel-psync', () => rand(ALL_SYNCS));
+
+  const restP = {None:0, Low:0.1, Medium:0.2, High:0.35}[restD];
+  const syncP = {Off:0, Light:0.15, Heavy:0.3}[sync];
+
+  // Build raw pattern
+  let pattern = [];
+  if (style === 'Alternate') {
+    for (let i = 0; i < len; i++) pattern.push(i % 2 === 0 ? 'D' : 'U');
+  } else if (style === 'Sweep') {
+    const sweep = ['D','D','D','D','U','U','U','U'];
+    for (let i = 0; i < len; i++) pattern.push(sweep[i % 8]);
+  } else if (style === 'Economy') {
+    for (let i = 0; i < len; i++) pattern.push(Math.random() < 0.65 ? 'D' : 'U');
+  } else if (style === 'Hybrid') {
+    const h = ['D','U','P','I','M','A'];
+    for (let i = 0; i < len; i++) pattern.push(rand(h));
+  } else { // Fingerstyle
+    const f = ['P','I','M','I','P','I','M','A'];
+    for (let i = 0; i < len; i++) pattern.push(f[i % 8]);
+  }
+
+  // Apply rests & syncopation
+  pattern = pattern.map((p, i) => {
+    if (Math.random() < restP) return 'R';
+    if (Math.random() < syncP && i % 2 === 1) return p + '~';
+    return p;
+  });
+
+  const SYMBOLS = { D:'↓', U:'↑', P:'p', I:'i', M:'m', A:'a', R:'·' };
+  const CLASSES  = {
+    D: 'pick-down', U: 'pick-up', P: 'pick-thumb',
+    I: 'pick-thumb', M: 'pick-thumb', A: 'pick-thumb', R: 'pick-rest'
+  };
+
+  const cells = pattern.map(p => {
+    const sync  = p.endsWith('~');
+    const base  = p.replace('~', '');
+    const sym   = (SYMBOLS[base] || base) + (sync ? '~' : '');
+    const cls   = CLASSES[base] || 'pick-rest';
+    return `<div class="pick-cell ${cls}" title="${base}${sync?' syncopated':''}">${sym}</div>`;
+  }).join('');
+
+  document.getElementById('pick-out').innerHTML =
+    `<div class="pick-row">${cells}</div>` +
+    `<div class="output-meta">${len} beats · ${style} · ${restD} rests · Syncopation: ${sync}</div>`;
+}
+
+function resetPicking() {
+  setVal('sel-pstyle', 'Alternate');
+  setVal('rng-plen', 8); document.getElementById('plen-val').textContent = 8;
+  setVal('sel-prest', 'None'); setVal('sel-psync', 'Off');
+  document.getElementById('pick-out').innerHTML = '<span class="empty-hint">Press generate to create a pattern</span>';
+}
+</script>
+</body>
+</html>
